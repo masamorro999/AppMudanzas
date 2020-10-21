@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 using TNSEjecutor.apiMudanza.Data;
 using TNSEjecutor.Common.Entities;
 
@@ -36,57 +38,35 @@ namespace TNSEjecutor.apiMudanza.Controllers
             }
         }
 
-
         //GET api/<controller>
         [HttpPost]
         [Route("PostProcesar/{document}")]
-        public ActionResult PostProcesar(int document)
+        public  ActionResult PostProcesar(IFormFile file, int document)
         {
             try
             {
-                if (HttpContext.Request.Form.Files.Any())
-                {
-                    // obtener el archivo publicado
-                    var archivo = HttpContext.Request.Form.Files["ArchivoSeleccionado"];
+                var dataFile = HttpContext.Request.Form.Files[0];
+                //List<IFormFile> file = new List<IFormFile>(archivoasd);
+                var result = new StringBuilder();
+                var reader = new StreamReader(dataFile.OpenReadStream());
+                var readfile = reader.ReadToEnd();
+                readfile = readfile.Replace("\n", "");
+                var listado = readfile.Split('\r').ToList();
+                listado.Remove("");                
+                
+                var resultadoFinal = ProcesarDiasDeTrabajo(listado, document);
+                string cleanString = resultadoFinal.Replace("\n", "").Replace("\r", "");                
+                //JObject jsonResult = JObject.Parse(cleanString);
+                //string cleanString = resultadoFinal.Replace("\n", "");
+                //string cleanString = resultadoFinal.Replace("\r", "" );
+                var listadoFinal = cleanString.Split('\r').ToList();
+                //listadoFinal.Remove("");
 
-                    //aca esta fallando en obtener archivo
-                    Stream fs = archivo.OpenReadStream();
-                    var streamReader = new StreamReader(fs);
-
-                    // leer el archivo
-                    var archivoLeido = streamReader.ReadToEnd();
-                    archivoLeido = archivoLeido.Replace("\n", "");
-                    var listado = archivoLeido.Split('\r').ToList();
-                    listado.Remove("");
-
-                    var resultadoFinal = ProcesarDiasDeTrabajo(listado, document);
-                    return Ok(resultadoFinal);
-                }
-                else
-                {
-                    return null;
-                }
+                return Ok(listadoFinal);
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
-            }
-        }
-
-        private void GuardarLog(int id, string resultadoFinal)
-        {
-            using (var context = new DataContext())
-            {
-                var log = new Ejecutor()
-                {
-                    Id = 0,
-                    Document = id,//asignar el documento que viene del front
-                    TransacDate = DateTime.Now.ToString(),
-                    NWorkTrips = resultadoFinal
-                };
-
-                context.Ejecutors.Add(log);
-                context.SaveChanges();
             }
         }
 
@@ -124,6 +104,19 @@ namespace TNSEjecutor.apiMudanza.Controllers
             return resultado;
         }
 
+        private void GuardarLog(int id, string resultadoFinal)
+        {
+            var log = new Ejecutor()
+            {
+                //Id = 0,
+                Document = id,//asignar el documento que viene del front
+                TransacDate = DateTime.Now.ToString(),
+                NWorkTrips = resultadoFinal
+            };
+
+            _context.Ejecutors.Add(log);
+            _context.SaveChanges();
+        }
 
         public static int CalcularViajes(List<int> elementos)
         {
@@ -152,8 +145,5 @@ namespace TNSEjecutor.apiMudanza.Controllers
 
             return viajes;
         }
-
-
-
     }
 }

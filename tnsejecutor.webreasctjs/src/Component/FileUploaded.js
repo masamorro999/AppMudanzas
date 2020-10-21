@@ -6,7 +6,7 @@ import { Alert, Button, Form, Card } from "react-bootstrap";
 import Spinner from "react-bootstrap/Spinner";
 import style from "./index.css";
 
-const FileUploaded = () => {
+const FileUpLoaded = () => {
   const [documentUser, setDocumentUser] = useState("");
   const [file, setFile] = useState(null);
   const [errors, setErrors] = useState([]);
@@ -41,17 +41,6 @@ const FileUploaded = () => {
     return errors;
   };
 
-  const downLoadFile = () => {
-    let txtInformation = "";
-    response.map((item) => {
-      txtInformation += `${item.name}: ${item.value} \n`;
-    });
-    var blob = new Blob([txtInformation], {
-      type: "text/plain",
-    });
-    saveAs(blob, "ArchivoSalida.txt");
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     const errors = validate(documentUser);
@@ -63,16 +52,35 @@ const FileUploaded = () => {
     sendInformation();
   };
 
+  const downLoadFile = () => {
+    let txtInformation = "";    
+    response.map((item) => {
+      return txtInformation += `${item.name}: ${item.value} \n`;
+    });
+    var blob = new Blob([txtInformation], {
+      type: "text/plain",
+    });
+    saveAs(blob, "ArchivoSalida.txt");
+  };  
+
   const sendInformation = async () => {
-    setLoadingApi(true);
     setShowDownloadButton(false);
-    setErrors([]);
+    setLoadingApi(true);
+    setErrors([]);    
     let formData = new FormData();
+    const documentUserInt = parseInt(documentUser);
+    formData.append("id", documentUserInt);
     formData.append("file", file);
-    formData.append("id", documentUser);
+    //BASE_URL = BASE_URL + documentUser;
+
+    let config = {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+      }
+    };   
 
     await axios
-      .post(BASE_URL, formData)
+      .post(BASE_URL + documentUser, formData, config)
       .then((response) => {
         console.log(response);
         if (response.data) {
@@ -180,4 +188,4 @@ const FileUploaded = () => {
   );
 };
 
-export default FileUploaded;
+export default FileUpLoaded;
