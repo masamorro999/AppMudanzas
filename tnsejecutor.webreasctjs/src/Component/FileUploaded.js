@@ -71,7 +71,6 @@ const FileUpLoaded = () => {
     const documentUserInt = parseInt(documentUser);
     formData.append("id", documentUserInt);
     formData.append("file", file);
-    //BASE_URL = BASE_URL + documentUser;
 
     let config = {
       headers: {

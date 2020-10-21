@@ -1,12 +1,12 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import React from "react";
 import "./App.css";
-import FileUploaded from "./Component/FileUploaded";
+import FileUpLoaded from "./Component/FileUpLoaded";
 
 function App() {
   return (
     <div className="App">
-      <FileUploaded />
+      <FileUpLoaded />
     </div>
   );
 }
