@@ -55,7 +55,7 @@ const FileUpLoaded = () => {
   const downLoadFile = () => {
     let txtInformation = "";    
     response.map((item) => {
-      return txtInformation += `${item.name}: ${item.value} \n`;
+       return txtInformation += `${item}\r\n\n`;
     });
     var blob = new Blob([txtInformation], {
       type: "text/plain",

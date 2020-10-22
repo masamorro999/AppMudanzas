@@ -45,24 +45,26 @@ namespace TNSEjecutor.apiMudanza.Controllers
         {
             try
             {
-                var dataFile = HttpContext.Request.Form.Files[0];
-                //List<IFormFile> file = new List<IFormFile>(archivoasd);
-                var result = new StringBuilder();
+                //Obetener el archivo y listarlo
+                var dataFile = file;                
                 var reader = new StreamReader(dataFile.OpenReadStream());
-                var readfile = reader.ReadToEnd();
-                readfile = readfile.Replace("\n", "");
-                var listado = readfile.Split('\r').ToList();
-                listado.Remove("");                
+                var readFile = reader.ReadToEnd();
+                readFile = readFile.Replace("\n", "");
+                var dataList = readFile.Split('\r').ToList();
+                dataList.Remove(""); 
                 
-                var resultadoFinal = ProcesarDiasDeTrabajo(listado, document);
-                string cleanString = resultadoFinal.Replace("\n", "").Replace("\r", "");                
-                //JObject jsonResult = JObject.Parse(cleanString);
-                //string cleanString = resultadoFinal.Replace("\n", "");
-                //string cleanString = resultadoFinal.Replace("\r", "" );
-                var listadoFinal = cleanString.Split('\r').ToList();
-                //listadoFinal.Remove("");
+                //procesar los datos y retornar la lista organizada
+                var rawData = GetWorkDays(dataList, document);
+                string cleanString = rawData.Replace("\r", "" );
+                var cleanedList = cleanString.Split('\n').ToList();
+                cleanedList.Remove("");
+                List<string> finalList = new List<string>();
 
-                return Ok(listadoFinal);
+                foreach (var item in cleanedList)
+                {
+                    finalList.Add(item);                 
+                }
+                return Ok(finalList);
             }
             catch (Exception ex)
             {
@@ -70,80 +72,81 @@ namespace TNSEjecutor.apiMudanza.Controllers
             }
         }
 
-        private string ProcesarDiasDeTrabajo(List<string> txt, int id)
+        //obtener los dias trabajados
+        private string GetWorkDays(List<string> txt, int id)
         {
-            List<int> listadoInicial = new List<int>();
+            List<int> rawList = new List<int>();
 
-            listadoInicial = txt.Select(x => Convert.ToInt32(x)).ToList();
-            int diaNumero = 0;
-            int c;
+            rawList = txt.Select(x => Convert.ToInt32(x)).ToList();
+            int nDay = 0;
+            int count;
+            string result = "";
 
-            string resultado = "";
-
-            // construir un listado con el resultado que debe generar la salida
-            for (int z = 1; z < listadoInicial.Count; z++)
+            // listar viajes resultado por dia trabajado
+            for (int i = 1; i < rawList.Count; i++)
             {
-                diaNumero++;
-                var numeroObjetos = listadoInicial[z];
-                List<int> listaPesoObjetosPorDia = new List<int>();
+                nDay++;
+                var data = rawList[i];
+                List<int> listElemenstByDay = new List<int>();
 
-                for (c = z + 1; c <= (z + numeroObjetos); c++)
+                for (count = i + 1; count <= (i + data); count++)
                 {
-                    listaPesoObjetosPorDia.Add(listadoInicial[c]);
+                    listElemenstByDay.Add(rawList[count]);
                 }
 
-                var resultadoxDia = "Case #" + diaNumero + ": " + CalcularViajes(listaPesoObjetosPorDia);
-
-                resultado = string.Concat(resultado, resultadoxDia, Environment.NewLine);
-
-                GuardarLog(id, resultadoxDia);
-
-                z = c - 1;
+                //obtener el # de viajes por dia
+                var getWorkDay = "Case #" + nDay + ": " + GetWorkTrips(listElemenstByDay);
+                result = string.Concat(result, getWorkDay, Environment.NewLine);
+                //SaveData(id, resultadoxDia);
+                i = count - 1;
             }
 
-            return resultado;
+            return result;
         }
 
-        private void GuardarLog(int id, string resultadoFinal)
+        //obtener el mejor # de viajes por dia trabajado
+        // 1 ≤ T ≤ 500
+        //1 ≤ N ≤ 100
+        //1 ≤ Wi ≤ 100
+        public static int GetWorkTrips(List<int> elements)
         {
-            var log = new Ejecutor()
+            var coltrolStack = elements.Max();
+            elements.Remove(coltrolStack);
+
+            var Wi = 0; //peso de cada elemento
+            var K = 1; //# de elementos en la bolsa
+            var trips = 0; // # de viajes
+
+            //logica para hallar optimo # de viajes
+            while (Wi < 50 && coltrolStack < 50)
             {
-                //Id = 0,
-                Document = id,//asignar el documento que viene del front
-                TransacDate = DateTime.Now.ToString(),
-                NWorkTrips = resultadoFinal
-            };
-
-            _context.Ejecutors.Add(log);
-            _context.SaveChanges();
-        }
-
-        public static int CalcularViajes(List<int> elementos)
-        {
-            var pivot = elementos.Max();
-            elementos.Remove(pivot);
-
-            var peso = 0;
-            var i = 1; //numero de elementos a mover en la bolsa
-            var viajes = 0;
-
-            while (peso < 50 && pivot < 50)
-            {
-                if (elementos.Count == 0) //si no hay mas elementos
+                if (elements.Count == 0) 
                     return 0;
 
-                var masBajo = elementos.Min();
-                elementos.Remove(masBajo);
-                i++;
-                peso = pivot * i;
+                var masBajo = elements.Min();
+                elements.Remove(masBajo);
+                K++;
+                Wi = coltrolStack * K;
             }
 
-            viajes++;
+            trips++;
+            if (elements.Count > 0)
+                trips += GetWorkTrips(elements);
 
-            if (elementos.Count > 0)
-                viajes += CalcularViajes(elementos);// invoca de nuevo la funcion hasta que no existan elementos
-
-            return viajes;
+            return trips;
         }
+
+        //Guardar registro en BD
+        private void SaveData(int document, string tripsNumber)
+        {
+            var data = new Ejecutor()
+            {
+                Document = document, 
+                TransacDate = DateTime.Now.ToString(),
+                NWorkTrips = tripsNumber
+            };
+            _context.Ejecutors.Add(data);
+            _context.SaveChanges();
+        }        
     }
 }
